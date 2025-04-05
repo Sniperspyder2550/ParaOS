@@ -2,20 +2,15 @@
 #define INTERRUPTS_H
 
 #include <stdint.h>
+#include "pic.h"
 
-// PIC-Ports
-#define PIC1_CMD  0x20
-#define PIC1_DATA 0x21
-#define PIC2_CMD  0xA0
-#define PIC2_DATA 0xA1
-
-// IDT-Strukturen
+// IDT-Einträge
 struct idt_entry {
-    uint16_t base_low;
+    uint16_t offset_low;
     uint16_t selector;
     uint8_t zero;
-    uint8_t flags;
-    uint16_t base_high;
+    uint8_t type_attr;
+    uint16_t offset_high;
 } __attribute__((packed));
 
 struct idt_ptr {
@@ -23,13 +18,16 @@ struct idt_ptr {
     uint32_t base;
 } __attribute__((packed));
 
-// Globale Variablen
-extern uint32_t ticks;
+// Globale IDT
+extern struct idt_entry idt[256];
+extern struct idt_ptr idt_ptr;
 
 // Funktionen
-void init_idt();
-void pic_remap();
-void init_timer();
-void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
+void idt_init();
+void idt_set_gate(uint8_t num, void* handler, uint8_t flags);
+
+// Interrupt-Handler
+extern void keyboard_handler();
+extern void timer_handler();  // Nicht vergessen!
 
 #endif

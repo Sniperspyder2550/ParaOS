@@ -2,46 +2,40 @@
 CC = gcc
 LD = ld
 ASM = nasm
-QEMU = $(QEMU_PATH)  # Nutzt Umgebungsvariable
 
 # Flags
-ASMFLAGS = -f bin -Wall
+ASMFLAGS = -f elf32
 CFLAGS = -m32 -ffreestanding -Wall -Wextra -I.
-LDFLAGS = -m elf_i386 -T linker.ld
-OBJS = kernel.o idt.o pic.o keyboard.o irq.o
+LDFLAGS = -m elf_i386 -T linker.ld --oformat binary
 
 # Dateien
-OBJECTS = kernel.o interrupts.o
-IMAGE = os_image.bin
+KERNEL_OBJS = kernel.o interrupts.o pic.o irq.o
+OUTPUT = os_image.bin
 
-.PHONY: all clean run
+.PHONY: all clean run debug
 
-all: $(IMAGE)
+all: $(OUTPUT)
 
-$(IMAGE): boot.bin kernel.bin
-	@echo "[LD] Linking final image"
-	cat $^ > $@
+$(OUTPUT): $(KERNEL_OBJS)
+	@echo "[LD] Linking kernel image"
+	$(LD) $(LDFLAGS) -o $@ $^
 
-boot.bin: boot.asm
+%.o: %.asm
 	@echo "[ASM] $<"
 	$(ASM) $(ASMFLAGS) $< -o $@
-
-kernel.bin: kernel.elf
-	@echo "[OBJCOPY] Creating flat binary"
-	objcopy -O binary $< $@
-
-kernel.elf: $(OBJECTS)
-	@echo "[LD] Linking kernel"
-	$(LD) $(LDFLAGS) -o $@ $^
 
 %.o: %.c
 	@echo "[CC] $<"
 	$(CC) $(CFLAGS) -c $< -o $@
 
-run: $(IMAGE)
-	@echo "[QEMU] Starting with portable version"
-	./qemu -drive format=raw,file=$(IMAGE) -serial stdio
+run: $(OUTPUT)
+	@echo "[QEMU] Starting VM"
+	qemu-system-i386 -drive format=raw,file=$(OUTPUT) -serial stdio
+
+debug: $(OUTPUT)
+	@echo "[QEMU] Starting in debug mode"
+	qemu-system-i386 -drive format=raw,file=$(OUTPUT) -serial stdio -d int -no-reboot -s -S &
 
 clean:
 	@echo "[CLEAN] Removing build files"
-	rm -f *.bin *.o *.elf
+	rm -f *.o *.bin
