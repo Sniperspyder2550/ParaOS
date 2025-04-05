@@ -8,6 +8,7 @@ QEMU = $(QEMU_PATH)  # Nutzt Umgebungsvariable
 ASMFLAGS = -f bin -Wall
 CFLAGS = -m32 -ffreestanding -Wall -Wextra -I.
 LDFLAGS = -m elf_i386 -T linker.ld
+OBJS = kernel.o idt.o pic.o keyboard.o irq.o
 
 # Dateien
 OBJECTS = kernel.o interrupts.o

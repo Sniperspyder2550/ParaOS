@@ -12,3 +12,7 @@ void pic_remap(void) {
     outb(0x21, 0x0);
     outb(0xA1, 0x0);
 }
+
+void pic_enable_keyboard() {
+    outb(PIC1_DATA, 0xFD); // Nur IRQ1 (Tastatur) erlauben (Bit 1 = 0)
+}

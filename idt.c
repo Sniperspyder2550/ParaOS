@@ -30,12 +30,8 @@ void init_idt() {
     idt_set_gate(32, (uint32_t)timer_handler_asm, 0x08, 0x8E);
 }
 
-void timer_handler_asm() {
-    // Placeholder for the timer interrupt handler
-    while (1) {
-        __asm__ __volatile__("hlt");
-    }
-}
+// Corrected timer_handler_asm declaration
+extern void timer_handler_asm(); // Declare as external if implemented in assembly
 
 __attribute__((section(".multiboot")))
 const unsigned int multiboot_header[] = {
@@ -49,4 +45,9 @@ void _start() {
     while (1) {
         __asm__ __volatile__("hlt");
     }
+}
+
+void idt_enable_irq1() {
+    idt_set_gate(0x21, (uint32_t)keyboard_handler_asm, 0x08, 0x8E); // IRQ1 -> INT 0x21
+    __asm__ __volatile__("sti"); // Enable interrupts
 }

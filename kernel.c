@@ -1,4 +1,6 @@
 #include "interrupts.h"
+#include "idt.h"
+#include "pic.h"
 
 // Prototyp vor der _start-Funktion deklarieren
 void main(void);
@@ -19,6 +21,8 @@ void main(void) {
     init_idt();
     pic_remap();
     init_timer();
+    idt_enable_irq1();  // Neu!
+    pic_enable_keyboard();  // Neu!
 
     // Interrupts aktivieren
     asm volatile("sti");
