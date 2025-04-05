@@ -1,16 +1,16 @@
 #include "interrupts.h"
 
-// Prototypen
-void _start();
-void main();
+// Prototyp vor der _start-Funktion deklarieren
+void main(void);
 
 // Kernel-Entry-Point
-void _start() {
+void __attribute__((noreturn)) _start(void) {
     main();
-    while(1);  // Falls main() zurückkehrt
+    while(1) asm("hlt");
 }
 
-void main() {
+// Hauptfunktion
+void main(void) {
     volatile char *vga = (volatile char*)0xB8000;
     vga[0] = 'O';
     vga[1] = 0x0F;  // Weißer Text
@@ -23,7 +23,10 @@ void main() {
     // Interrupts aktivieren
     asm volatile("sti");
 
+    // Hauptschleife mit Tick-Anzeige
     while(1) {
-        // Hauptschleife
+        if (ticks % 100 == 0) {
+            vga[2] = '0' + (ticks / 100 % 10);
+        }
     }
 }

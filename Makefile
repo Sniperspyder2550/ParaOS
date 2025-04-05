@@ -2,6 +2,7 @@
 CC = gcc
 LD = ld
 ASM = nasm
+QEMU = $(QEMU_PATH)  # Nutzt Umgebungsvariable
 
 # Flags
 ASMFLAGS = -f bin -Wall
@@ -37,8 +38,8 @@ kernel.elf: $(OBJECTS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 run: $(IMAGE)
-	@echo "[QEMU] Starting"
-	qemu-system-i386 -drive format=raw,file=$(IMAGE) -serial stdio
+	@echo "[QEMU] Starting with portable version"
+	./qemu -drive format=raw,file=$(IMAGE) -serial stdio
 
 clean:
 	@echo "[CLEAN] Removing build files"

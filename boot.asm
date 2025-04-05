@@ -1,5 +1,7 @@
 [org 0x7C00]
 [bits 16]
+mov ax, 0x07C0      ; Segment statt absoluter Adresse
+mov ds, ax
 
 entry:
     cli
