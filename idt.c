@@ -37,6 +37,13 @@ void timer_handler_asm() {
     }
 }
 
+__attribute__((section(".multiboot")))
+const unsigned int multiboot_header[] = {
+    0x1BADB002, // Magic number
+    0x0,        // Flags (no additional features required)
+    -(0x1BADB002 + 0x0) // Checksum (magic + flags + checksum = 0)
+};
+
 void _start() {
     init_idt();
     while (1) {

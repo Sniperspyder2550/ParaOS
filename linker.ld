@@ -10,6 +10,7 @@ SECTIONS {
     . = 0x1000;
 
     .text : {
+        *(.multiboot)  /* Place the Multiboot header first */
         *(.text)
     } :text
 
