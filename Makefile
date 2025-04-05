@@ -1,64 +1,44 @@
-# Makefile für ParaOS
-QEMU = qemu-system-x86  # Nutze system-QEMU im Container
-KERNEL = kernel.elf
-IMAGE = os_image.bin
-
-all: $(IMAGE)
-
-$(IMAGE): boot.bin kernel.bin
-    cat $^ > $@
-
-boot.bin: boot.asm
-    nasm -f bin $< -o $@
-
-kernel.bin: kernel.elf
-    objcopy -O binary $< $@
-
-kernel.elf: kernel.o
-    ld -m elf_i386 -T linker.ld -o $@ $^
-
-kernel.o: kernel.c
-    gcc -m32 -ffreestanding -c $< -o $@
-
-run: $(IMAGE)
-    $(QEMU) -drive format=raw,file=$(IMAGE) -serial stdio
-
-clean:
-    rm -f *.bin *.o *.elf# ParaOS Build System
-QEMU = qemu-system-x86
-KERNEL = kernel.elf
-IMAGE = os_image.bin
+# Tools
 CC = gcc
 LD = ld
 ASM = nasm
 
-.PHONY: all run clean
+# Flags
+ASMFLAGS = -f bin -Wall
+CFLAGS = -m32 -ffreestanding -Wall -Wextra -I.
+LDFLAGS = -m elf_i386 -T linker.ld
+
+# Dateien
+OBJECTS = kernel.o interrupts.o
+IMAGE = os_image.bin
+
+.PHONY: all clean run
 
 all: $(IMAGE)
 
 $(IMAGE): boot.bin kernel.bin
-	@echo "[+] Linking bootloader and kernel"
+	@echo "[LD] Linking final image"
 	cat $^ > $@
 
 boot.bin: boot.asm
 	@echo "[ASM] $<"
-	$(ASM) -f bin $< -o $@ -Wall
+	$(ASM) $(ASMFLAGS) $< -o $@
 
-kernel.bin: $(KERNEL)
+kernel.bin: kernel.elf
 	@echo "[OBJCOPY] Creating flat binary"
 	objcopy -O binary $< $@
 
-$(KERNEL): kernel.o
+kernel.elf: $(OBJECTS)
 	@echo "[LD] Linking kernel"
-	$(LD) -m elf_i386 -T linker.ld -o $@ $^
+	$(LD) $(LDFLAGS) -o $@ $^
 
-kernel.o: kernel.c
-	@echo "[CC] Compiling kernel"
-	$(CC) -m32 -ffreestanding -c $< -o $@ -Wall -Wextra
+%.o: %.c
+	@echo "[CC] $<"
+	$(CC) $(CFLAGS) -c $< -o $@
 
 run: $(IMAGE)
-	@echo "[QEMU] Starting VM"
-	$(QEMU) -drive format=raw,file=$(IMAGE) -serial stdio -d guest_errors
+	@echo "[QEMU] Starting"
+	qemu-system-i386 -drive format=raw,file=$(IMAGE) -serial stdio
 
 clean:
 	@echo "[CLEAN] Removing build files"

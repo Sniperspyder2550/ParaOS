@@ -1,43 +1,29 @@
-#include "idt.h"
-#include "timer.h"
+#include "interrupts.h"
 
-// Declare init_timer as an external function
-extern void init_timer();
+// Prototypen
+void _start();
+void main();
 
-// Declare pic_remap as extern
-extern void pic_remap();
-
-// Declare and initialize ticks as a volatile global variable
-extern volatile uint32_t ticks;
-
-void kernel_main(void) {
-    // Your kernel's main logic here
-    while (1) {
-        // Halt the CPU or perform tasks
-    }
+// Kernel-Entry-Point
+void _start() {
+    main();
+    while(1);  // Falls main() zurückkehrt
 }
 
 void main() {
-    // Initialize the Interrupt Descriptor Table (IDT)
+    volatile char *vga = (volatile char*)0xB8000;
+    vga[0] = 'O';
+    vga[1] = 0x0F;  // Weißer Text
+
+    // Interrupt-System initialisieren
     init_idt();
-
-    // Remap the Programmable Interrupt Controller (PIC)
     pic_remap();
-
-    // Initialize the timer
-    // Call the init_timer function to initialize the timer
     init_timer();
 
-    // Enable interrupts
+    // Interrupts aktivieren
     asm volatile("sti");
 
-    // Main loop
-    while (1) {
-        // Check if ticks is a multiple of 50
-        if (ticks % 50 == 0) {
-            // Access VGA memory safely
-            volatile char *vga = (volatile char*)0xB8000;
-            vga[0] = '0' + (ticks / 50 % 10);
-        }
+    while(1) {
+        // Hauptschleife
     }
 }
