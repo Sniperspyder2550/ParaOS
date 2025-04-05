@@ -4,11 +4,18 @@ struct idt_entry idt[IDT_ENTRIES];
 struct idt_ptr idt_descriptor;
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
-    idt[num].base_low = (base & 0xFFFF);
+    idt[num].base_low = base & 0xFFFF;
     idt[num].base_high = (base >> 16) & 0xFFFF;
-    idt[num].selector = sel;
-    idt[num].zero = 0;
+    idt[num].sel = sel;
+    idt[num].always0 = 0;
     idt[num].flags = flags;
+}
+
+void default_handler(void) {
+    // Handle unexpected interrupts
+    while (1) {
+        // Halt the CPU or log the error
+    }
 }
 
 void init_idt(){

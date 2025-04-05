@@ -3,9 +3,7 @@
 
 #include <stdint.h>
 
-extern volatile uint32_t ticks;
-
-void init_timer;
-void timer_handler;
+void timer_handler(void);  // Correct function prototype
+void init_timer(void);
 
 #endif

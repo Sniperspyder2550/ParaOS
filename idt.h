@@ -9,11 +9,11 @@ typedef unsigned int uint32_t;
 #define IDT_ENTRIES 256
 
 struct idt_entry {
-    uint16_t base_low;  // Lower 16 bits of the handler function address
-    uint16_t selector;    // Kernel segment selector
-    uint8_t zero;         // Reserved, set to 0
-    uint8_t flags;    // Type and attributes
-    uint16_t base_high; // Upper 16 bits of the handler function address
+    uint16_t base_low;
+    uint16_t sel;       // Selector
+    uint8_t always0;    // Always zero
+    uint8_t flags;
+    uint16_t base_high;
 } __attribute__((packed));
 
 struct idt_ptr {

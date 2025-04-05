@@ -8,7 +8,14 @@ extern void init_timer();
 extern void pic_remap();
 
 // Declare and initialize ticks as a volatile global variable
-volatile unsigned int ticks = 0;
+extern volatile uint32_t ticks;
+
+void kernel_main(void) {
+    // Your kernel's main logic here
+    while (1) {
+        // Halt the CPU or perform tasks
+    }
+}
 
 void main() {
     // Initialize the Interrupt Descriptor Table (IDT)

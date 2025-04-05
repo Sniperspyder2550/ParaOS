@@ -24,11 +24,10 @@ enable_interrupts:
     ret
 
 timer_handler_asm:
-    pusha
-    call timer_handler
-    popa
-    iret
+    pusha                   ; Save all general-purpose registers
+    call timer_handler      ; Call the C timer handler
+    popa                    ; Restore all general-purpose registers
+    iret                    ; Return from the interrupt
     
-
 
 section .note.GNU-stack noalloc noexec nowrite progbits
