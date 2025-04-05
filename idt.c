@@ -14,6 +14,9 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
 void init_idt(){
     idt_descriptor.limit = sizeof(struct idt_entry) * IDT_ENTRIES -1;
     idt_descriptor.base = (uint32_t)&idt;
+
+    extern void timer_handler_asm(void);
+    idt_set_gate(32, (uint32_t)timer_handler_asm, 0x08, 0x8E);
     
     
     for(int i = 0; i < IDT_ENTRIES; i++){
