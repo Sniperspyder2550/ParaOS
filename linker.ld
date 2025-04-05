@@ -1,27 +1,23 @@
 ENTRY(_start)
-MEMORY {
-    CODE (rx) : ORIGIN = 0x1000, LENGTH = 1M
-    DATA (rw) : ORIGIN = 0x200000, LENGTH = 1M
-    STACK (rw) : ORIGIN = 0x300000, LENGTH = 16K
+
+PHDRS {
+    text PT_LOAD FLAGS(0x5);  /* Read + Execute */
+    data PT_LOAD FLAGS(0x6); /* Read + Write */
+    bss PT_LOAD FLAGS(0x6);  /* Read + Write */
 }
 
 SECTIONS {
-    . = 0x00100000; /* Kernel load address */
+    . = 0x1000;
 
     .text : {
         *(.text)
-    } > CODE
-
-    .rodata : {
-        *(.rodata)
-    } > CODE
+    } :text
 
     .data : {
         *(.data)
-    } > DATA
+    } :data
 
     .bss : {
         *(.bss)
-        *(COMMON)
-    } > DATA
+    } :bss
 }
