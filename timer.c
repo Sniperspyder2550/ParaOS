@@ -11,7 +11,7 @@ static void timer_set_freq(uint32_t hz){
     uint16_t divisor = PIT_FREQ / hz;
     outb(0x43, 0x36);
     outb(0x40, divisor & 0xFF);
-    oubt(0x40, divisor >> 8);
+    outb(0x40, divisor >> 8);
 }
 
 void timer_handler() {
