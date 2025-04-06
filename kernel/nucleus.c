@@ -9,6 +9,8 @@ struct gdt_ptr {
 struct idt_entry idt[256] __attribute__((aligned(8)));
 struct idt_ptr idt_descriptor;
 
+struct gdt_ptr gdt_ptr;
+
 void print_number(uint32_t num, uint8_t x, uint8_t y) {
     char buffer[11];
     int i = 0;
