@@ -1,11 +1,9 @@
 #ifndef OS_H
 #define OS_H
 
-// Cross-Compiler Erkennung
 #ifdef CROSS_COMPILE
     #include <stdint.h>
 #else
-    // Manuelle Typendefinitionen als Fallback
     typedef unsigned char       uint8_t;
     typedef unsigned short      uint16_t;
     typedef unsigned int        uint32_t;
@@ -22,19 +20,11 @@
 #define PIC2_CMD        0xA0
 #define PIC2_DATA       0xA1
 #define KEYBOARD_DATA   0x60
-
-// Tastatur-Scancodes
-#define KEY_ENTER       0x1C
-#define KEY_BACKSPACE   0x0E
-#define KEY_LSHIFT      0x2A
-#define KEY_RSHIFT      0x36
-
-// VGA-Einstellungen
 #define VGA_WIDTH       80
 #define VGA_HEIGHT      25
 #define VGA_COLOR_WHITE 0x07
 
-// GDT-Struktur
+// GDT
 struct gdt_entry {
     uint16_t limit_low;
     uint16_t base_low;
@@ -44,7 +34,7 @@ struct gdt_entry {
     uint8_t base_high;
 } __attribute__((packed));
 
-// IDT-Struktur
+// IDT
 struct idt_entry {
     uint16_t base_lo;
     uint16_t sel;
@@ -53,12 +43,19 @@ struct idt_entry {
     uint16_t base_hi;
 } __attribute__((packed));
 
-// Funktionsdeklarationen
+struct idt_ptr {
+    uint16_t limit;
+    uint32_t base;
+} __attribute__((packed));
+
+// Funktionen
 void gdt_flush();
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
 void init_timer();
 void init_keyboard();
-void print_char(char c);
+void print_char(char c, uint8_t x, uint8_t y);
+void print_number(uint32_t num, uint8_t x, uint8_t y);
+void clear_screen();
 void pic_remap();
 
 // Assembly-Linker
@@ -67,8 +64,9 @@ extern void keyboard_handler_asm();
 
 // Globale Variablen
 extern volatile uint32_t ticks;
+extern struct idt_ptr idt_descriptor;
 
-// Hardware-Zugriff
+// IO
 static inline void outb(uint16_t port, uint8_t val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
@@ -79,4 +77,4 @@ static inline uint8_t inb(uint16_t port) {
     return val;
 }
 
-#endif // OS_Hs
+#endif // OS_H
