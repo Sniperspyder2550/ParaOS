@@ -1,24 +1,41 @@
 ENTRY(_start)
 
 PHDRS {
-    text PT_LOAD FLAGS(0x5);  /* Read + Execute */
-    data PT_LOAD FLAGS(0x6); /* Read + Write */
-    bss PT_LOAD FLAGS(0x6);  /* Read + Write */
+    boot PT_LOAD FLAGS(5);    /* R-X für Bootloader */
+    text PT_LOAD FLAGS(5);    /* R-X für Kernel */
+    data PT_LOAD FLAGS(6);    /* RW- für Daten */
 }
 
 SECTIONS {
-    . = 0x1000;
+    /* Bootloader bei 0x7C00 */
+    .boot 0x7C00 : {
+        *(.boot)
+    } :boot
+
+    /* Kernel ab 1MB (0x100000) */
+    . = 0x100000;
 
     .text : {
-        *(.multiboot)  /* Place the Multiboot header first */
-        *(.text)
+        *(.multiboot)
+        *(.text .text.*)
+    } :text
+
+    .rodata : {
+        *(.rodata .rodata.*)
     } :text
 
     .data : {
-        *(.data)
+        *(.data .data.*)
     } :data
 
     .bss : {
+        _bss_start = .;
         *(.bss)
-    } :bss
+        *(COMMON)
+        _bss_end = .;
+    } :data
+
+    /DISCARD/ : {
+        *(.note.gnu.property)
+    }
 }

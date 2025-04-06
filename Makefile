@@ -1,45 +1,46 @@
-# Tools
-CC = gcc
-LD = ld
+CC = i686-elf-gcc
+LD = i686-elf-ld
+CFLAGS = -DCROSS_COMPILE -ffreestanding -nostdlib -I.
 ASM = nasm
 
-# Flags
 ASMFLAGS = -f elf32
-CFLAGS = -m32 -ffreestanding -Wall -Wextra -I.
-LDFLAGS = -m elf_i386 -T linker.ld --oformat binary
+LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
 
-# Dateien
-KERNEL_OBJS = kernel.o interrupts.o pic.o irq.o
-OUTPUT = os_image.bin
+# Source-Pfade
+BOOTLOADER = boot/boot.bin
+KERNEL_SOURCES = kernel/core.asm kernel/nucleus.c drivers/drivers.c lib/lib.c
+OBJS = $(KERNEL_SOURCES:.c=.o) $(KERNEL_SOURCES:.asm=.o)
 
-.PHONY: all clean run debug
+all: os_image.bin
 
-all: $(OUTPUT)
+# Bootloader kompilieren
+$(BOOTLOADER): boot/boot.asm
+	@echo "[ASM] Bootloader"
+	@mkdir -p boot
+	nasm -f bin $< -o $@
 
-$(OUTPUT): $(KERNEL_OBJS)
-	@echo "[LD] Linking kernel image"
-	$(LD) $(LDFLAGS) -o $@ $^
-
+# Kernel kompilieren
 %.o: %.asm
 	@echo "[ASM] $<"
-	$(ASM) $(ASMFLAGS) $< -o $@
+	@mkdir -p $(@D)
+	nasm $(ASMFLAGS) $< -o $@
 
 %.o: %.c
 	@echo "[CC] $<"
+	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-boot_image.bin: bootloader.asm os_image.bin
-	nasm -f bin bootloader.asm -o bootloader.bin
-	cat bootloader.bin os_image.bin > boot_image.bin
-
-run: boot_image.bin
-	@echo "[QEMU] Starting VM"
-	qemu-system-i386 -drive format=raw,file=boot_image.bin -serial stdio -d int
-
-debug: $(OUTPUT)
-	@echo "[QEMU] Starting in debug mode"
-	qemu-system-i386 -drive format=raw,file=$(OUTPUT) -serial stdio -d int -no-reboot -s -S &
+# Image erstellen
+os_image.bin: $(BOOTLOADER) $(OBJS)
+	@echo "[LD] Linking kernel..."
+	$(LD) $(LDFLAGS) -o kernel.bin $(OBJS)
+	@echo "[IMG] Merging components..."
+	dd if=/dev/zero of=os_image.bin bs=512 count=2048  # 1MB Platz
+	dd conv=notrunc if=boot/boot.bin of=os_image.bin 
+	dd conv=notrunc if=kernel.bin of=os_image.bin seek=2048  # 1MB Offset
 
 clean:
-	@echo "[CLEAN] Removing build files"
-	rm -f *.o *.bin
+	rm -rf boot/*.bin kernel/*.o drivers/*.o lib/*.o *.bin
+
+run: os_image.bin
+	qemu-system-i386 -drive format=raw,file=os_image.bin
