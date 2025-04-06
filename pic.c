@@ -1,5 +1,8 @@
 #include "io.h"
 
+// Define PIC1_DATA as the data port for the master PIC
+#define PIC1_DATA 0x21
+
 void pic_remap(void) {
     outb(0x20, 0x11);
     outb(0xA0, 0x11);
@@ -14,5 +17,5 @@ void pic_remap(void) {
 }
 
 void pic_enable_keyboard() {
-    outb(PIC1_DATA, 0xFD); // Nur IRQ1 (Tastatur) erlauben (Bit 1 = 0)
+    outb(PIC1_DATA, 0xFD); // Only allow IRQ1 (keyboard) (Bit 1 = 0)
 }
