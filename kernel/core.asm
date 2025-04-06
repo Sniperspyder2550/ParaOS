@@ -8,6 +8,8 @@ mb_header:
 section .text
 extern main
 global _start
+extern timer_handler
+extern keyboard_handler
 
 _start:
     ; BSS-Clear
