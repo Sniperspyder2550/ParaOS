@@ -1,17 +1,13 @@
 #!/bin/bash
 
-# Build-Script für ParaOS
-echo "=== ParaOS Build-System ==="
+# Compile all .c files
+gcc -m32 -ffreestanding -c *.c
 
-# 1. Assemblierung
-nasm -f elf32 irq.asm -o irq.o || exit 1
+# Assemble all .asm files
+nasm -f elf32 handlers.asm -o handlers.o
 
-# 2. C-Kompilierung
-gcc -m32 -ffreestanding -I. -c kernel.c -o kernel.o || exit 1
-gcc -m32 -ffreestanding -I. -c pic.c -o pic.o || exit 1
-gcc -m32 -ffreestanding -I. -c keyboard.c -o keyboard.o || exit 1
+# Link all object files
+ld -m elf_i386 -T linker.ld -o kernel.bin *.o
 
-# 3. Linken
-ld -m elf_i386 -T linker.ld -o os_image.bin *.o --oformat binary || exit 1
-
-echo "=== Build erfolgreich ==="
+# Run with QEMU
+qemu-system-i386 -kernel kernel.bin

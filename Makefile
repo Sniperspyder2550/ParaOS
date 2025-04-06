@@ -28,9 +28,13 @@ $(OUTPUT): $(KERNEL_OBJS)
 	@echo "[CC] $<"
 	$(CC) $(CFLAGS) -c $< -o $@
 
-run: $(OUTPUT)
+boot_image.bin: bootloader.asm os_image.bin
+	nasm -f bin bootloader.asm -o bootloader.bin
+	cat bootloader.bin os_image.bin > boot_image.bin
+
+run: boot_image.bin
 	@echo "[QEMU] Starting VM"
-	qemu-system-i386 -drive format=raw,file=$(OUTPUT) -serial stdio
+	qemu-system-i386 -drive format=raw,file=boot_image.bin -serial stdio -d int
 
 debug: $(OUTPUT)
 	@echo "[QEMU] Starting in debug mode"

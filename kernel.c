@@ -2,33 +2,37 @@
 #include "idt.h"
 #include "pic.h"
 
-// Prototyp vor der _start-Funktion deklarieren
+// Declare ticks as extern
+extern volatile uint32_t ticks;
+
+// Prototype for the main function
 void main(void);
 
-// Kernel-Entry-Point
+// Kernel Entry Point
 void __attribute__((noreturn)) _start(void) {
     main();
-    while(1) asm("hlt");
+    while (1) asm("hlt");
 }
 
-// Hauptfunktion
+// Main function
 void main(void) {
-    volatile char *vga = (volatile char*)0xB8000;
-    vga[0] = 'O';
-    vga[1] = 0x0F;  // Weißer Text
+    init_idt(); // Initialize the IDT
 
-    // Interrupt-System initialisieren
-    init_idt();
+    volatile char *vga = (volatile char *)0xB8000;
+    vga[0] = 'O';
+    vga[1] = 0x0F; // White text
+
+    // Initialize the interrupt system
     pic_remap();
     init_timer();
-    idt_enable_irq1();  // Neu!
-    pic_enable_keyboard();  // Neu!
+    idt_enable_irq1();  // Enable IRQ1 (keyboard)
+    pic_enable_keyboard();  // Enable keyboard interrupts
 
-    // Interrupts aktivieren
+    // Enable interrupts
     asm volatile("sti");
 
-    // Hauptschleife mit Tick-Anzeige
-    while(1) {
+    // Main loop with tick display
+    while (1) {
         if (ticks % 100 == 0) {
             vga[2] = '0' + (ticks / 100 % 10);
         }

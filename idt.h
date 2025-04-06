@@ -2,6 +2,8 @@
 #define IDT_H
 
 #include <stdint.h>
+#include "interrupts.h" // Include interrupts.h for shared definitions
+#include "io.h" // Include io.h for outb function
 
 /* ======================
    Erweiterte IDT-Definition
@@ -9,6 +11,7 @@
 #define IDT_ENTRIES 256
 #define PIC1_CMD 0x20
 #define PIC1_DATA 0x21
+#define PIC2_CMD 0xA0 // Define PIC2_CMD
 
 // IDT-Gate-Typen
 #define IDT_TASK_GATE    0x5
@@ -32,19 +35,6 @@ typedef struct {
     uint64_t base;
 } idt_ptr_t;
 
-struct idt_entry {
-    uint16_t base_low;  // Lower 16 bits of the handler function address
-    uint16_t sel;       // Kernel segment selector
-    uint8_t always0;    // This must always be zero
-    uint8_t flags;      // Flags (type and attributes)
-    uint16_t base_high; // Upper 16 bits of the handler function address
-};
-
-struct idt_ptr {
-    uint16_t limit; // Size of the IDT
-    uint32_t base;  // Base address of the IDT
-};
-
 #pragma pack(pop)
 
 /* ======================
@@ -63,8 +53,8 @@ extern void timer_handler_asm();
 void pic_remap(void);
 void pic_enable_irq(uint8_t irq);
 static inline void pic_send_eoi(uint8_t irq) {
-    if (irq >= 8) outb(PIC2_CMD, 0x20);
-    outb(PIC1_CMD, 0x20);
+    if (irq >= 8) outb(PIC2_CMD, 0x20); // Send EOI to slave PIC
+    outb(PIC1_CMD, 0x20);              // Send EOI to master PIC
 }
 
 /* ======================

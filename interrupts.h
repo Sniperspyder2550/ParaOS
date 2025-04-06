@@ -2,32 +2,31 @@
 #define INTERRUPTS_H
 
 #include <stdint.h>
-#include "pic.h"
 
-// IDT-Einträge
+// IDT entry structure
 struct idt_entry {
-    uint16_t offset_low;
-    uint16_t selector;
-    uint8_t zero;
-    uint8_t type_attr;
-    uint16_t offset_high;
+    uint16_t base_lo;
+    uint16_t sel;        // Kernel segment selector
+    uint8_t always0;     // This must always be zero
+    uint8_t flags;       // Flags
+    uint16_t base_hi;
 } __attribute__((packed));
 
+// IDT pointer structure
 struct idt_ptr {
     uint16_t limit;
     uint32_t base;
 } __attribute__((packed));
 
-// Globale IDT
-extern struct idt_entry idt[256];
+// Declare idt_ptr as extern
 extern struct idt_ptr idt_ptr;
 
-// Funktionen
+// Function declarations
 void idt_init();
-void idt_set_gate(uint8_t num, void* handler, uint8_t flags);
+void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
+void init_timer();
+void idt_enable_irq1();
+void pic_enable_keyboard();
+void init_idt(); // Declare init_idt function
 
-// Interrupt-Handler
-extern void keyboard_handler();
-extern void timer_handler();  // Nicht vergessen!
-
-#endif
+#endif // INTERRUPTS_H

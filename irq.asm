@@ -1,19 +1,23 @@
 [bits 32]
 
 [global timer_handler_asm]
-[global keyboard_handler]
+[global keyboard_handler_asm]
 
 [extern timer_handler_c]
 [extern keyboard_handler_c]
 
-timer_handler:
-    pusha
-    call timer_handler_c
-    popa
-    iretd
+section .text
 
-keyboard_handler:
+timer_handler_asm:
     pusha
-    call keyboard_handler_c
+    call timer_handler_c  ; Call the C timer handler
     popa
-    iretd
+    iret
+
+keyboard_handler_asm:
+    pusha
+    call keyboard_handler_c  ; Call the C keyboard handler
+    popa
+    iret
+
+section .note.GNU-stack noalloc noexec nowrite progbits

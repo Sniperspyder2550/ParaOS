@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "io.h" // Add this include to declare outb
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
