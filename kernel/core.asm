@@ -58,3 +58,5 @@ section .bss
 _bss_start:
 resb 4096
 _bss_end:
+
+section .note.GNU-stack noalloc noexec nowrite progbits

@@ -1,6 +1,5 @@
-// os.h
-#ifndef OS_H
-#define OS_H
+#ifndef PARAOS_OS_H
+#define PARAOS_OS_H
 
 #ifdef CROSS_COMPILE
     #include <stdint.h>
@@ -23,25 +22,41 @@
 #define KEYBOARD_DATA   0x60
 #define VGA_WIDTH       80
 #define VGA_HEIGHT      25
-#define VGA_COLOR_WHITE 0x07
+#define VGA_COLOR_WHITE 0x0F  // Korrigiert auf 0x0F (weißer Text auf schwarz)
 
-// Tasten-Kodes (Beispiele – erweitere diese nach Bedarf)
-#define KEY_LSHIFT 0x2A
-#define KEY_RSHIFT 0x36
-#define KEY_ENTER  0x1C
+// Tasten-Codes
+#define KEY_LSHIFT    0x2A
+#define KEY_RSHIFT    0x36
+#define KEY_ENTER     0x1C
 #define KEY_BACKSPACE 0x0E
 
-//GUI / Shell
-extern Window *active_shell;
+// Window-Struktur mit explizitem Struct-Namen
+typedef struct Window {
+    int x, y;
+    int width, height;
+    uint32_t bg_color;
+    const char* title;
+} Window;
 
+// Prototypen
+extern Window *active_shell;
 extern void shell_handle_key(char key, Window *shell_win);
 
-volatile uint32_t ticks = 0;
-static uint8_t cursor_x = 0;
-static uint8_t cursor_y = 0;
-static uint16_t* vga_buffer = (uint16_t*)0xB8000;
+// Hardware-Funktionen
+void gdt_init();
+void idt_init();
+void init_timer();
+void init_keyboard();
+void print_char(char c, uint8_t x, uint8_t y);
+void clear_screen();
+void pic_remap();
+void timer_handler();
+void keyboard_handler();
+void move_cursor(uint8_t x, uint8_t y);  // Hinzugefügt
 
-// GDT
+// GDT/IDT-Strukturen
+extern struct gdt_ptr gdt_ptr;
+
 struct gdt_entry {
     uint16_t limit_low;
     uint16_t base_low;
@@ -51,7 +66,6 @@ struct gdt_entry {
     uint8_t base_high;
 } __attribute__((packed));
 
-// IDT
 struct idt_entry {
     uint16_t base_lo;
     uint16_t sel;
@@ -65,16 +79,7 @@ struct idt_ptr {
     uint32_t base;
 } __attribute__((packed));
 
-// Funktionen
-void gdt_flush();
-void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
-void init_timer();
-void init_keyboard();
-void print_char(char c, uint8_t x, uint8_t y);
-void clear_screen();
-void pic_remap();
-
-// Assembly-Linker
+// Assembly-Linker-Symbole
 extern void timer_handler_asm();
 extern void keyboard_handler_asm();
 
@@ -82,7 +87,7 @@ extern void keyboard_handler_asm();
 extern volatile uint32_t ticks;
 extern struct idt_ptr idt_descriptor;
 
-// IO
+// IO-Funktionen
 static inline void outb(uint16_t port, uint8_t val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
@@ -93,6 +98,7 @@ static inline uint8_t inb(uint16_t port) {
     return val;
 }
 
+// String-Funktionen
 static inline int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
@@ -101,4 +107,4 @@ static inline int strcmp(const char* s1, const char* s2) {
     return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
-#endif // OS_H
+#endif // PARAOS_OS_H
