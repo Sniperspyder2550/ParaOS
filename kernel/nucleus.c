@@ -1,92 +1,163 @@
+// nucleus.c
 #include "os.h"
 
-struct gdt_entry gdt[3];
-struct gdt_ptr {
-    uint16_t limit;
-    uint32_t base;
-} __attribute__((packed));
+// --------------------------------------------------------
+// Neue Definitionsbereiche für Grafik und GUI/Shell
+// --------------------------------------------------------
 
-struct idt_entry idt[256] __attribute__((aligned(8)));
-struct idt_ptr idt_descriptor;
+// Wir definieren einen einfachen Grafikmodus mit festen Parametern:
+#define SCREEN_WIDTH   640
+#define SCREEN_HEIGHT  480
 
-struct gdt_ptr gdt_ptr;
+volatile uint32_t* framebuffer = (volatile uint32_t*)0xE0000000;  // Annahme: Framebuffer-Adresse (muss durch VESA ermittelt werden)
 
-void print_number(uint32_t num, uint8_t x, uint8_t y) {
-    char buffer[11];
-    int i = 0;
-    
-    if(num == 0) {
-        print_char('0', x, y);
-        return;
-    }
+// Grafikfunktionen
+void put_pixel(int x, int y, uint32_t color) {
+    if(x < 0 || x >= SCREEN_WIDTH || y < 0 || y >= SCREEN_HEIGHT)
+         return;
+    framebuffer[y * SCREEN_WIDTH + x] = color;
+}
 
-    while(num > 0 && i < 10) {
-        buffer[i++] = (num % 10) + '0';
-        num /= 10;
-    }
-
-    for(int j = i-1, k = 0; j >= 0; j--, k++) {
-        print_char(buffer[j], x + k, y);
+void fill_rect(int x, int y, int width, int height, uint32_t color) {
+    for (int j = y; j < y + height; j++) {
+         for (int i = x; i < x + width; i++) {
+              put_pixel(i, j, color);
+         }
     }
 }
 
-void gdt_set_gate(int num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
-    gdt[num].base_low = base & 0xFFFF;
-    gdt[num].base_middle = (base >> 16) & 0xFF;
-    gdt[num].base_high = (base >> 24) & 0xFF;
+// Einfache Zeichenfunktionen für die GUI (Statt eines echten Bitmap-Fonts verwenden wir Rechtecke zur Darstellung)
+#define CHAR_WIDTH   8
+#define CHAR_HEIGHT  8
 
-    gdt[num].limit_low = limit & 0xFFFF;
-    gdt[num].granularity = ((limit >> 16) & 0x0F) | (gran & 0xF0);
-    gdt[num].access = access;
+void draw_char(char c, int x, int y, uint32_t color) {
+    // Diese rudimentäre Implementierung ignoriert den tatsächlichen Zeichensatz
+    // und stellt jedes Zeichen als gefülltes Rechteck dar.
+    fill_rect(x, y, CHAR_WIDTH, CHAR_HEIGHT, color);
 }
 
-void gdt_init() {
-    gdt_ptr.limit = sizeof(gdt) - 1;
-    gdt_ptr.base = (uint32_t)&gdt;
-
-    gdt_set_gate(0, 0, 0, 0, 0);
-    gdt_set_gate(1, 0, 0xFFFFF, 0x9A, 0xCF);
-    gdt_set_gate(2, 0, 0xFFFFF, 0x92, 0xCF);
-
-    __asm__ volatile("lgdt %0" : : "m"(gdt_ptr));
-}
-
-void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
-    idt[num].base_lo = base & 0xFFFF;
-    idt[num].base_hi = (base >> 16) & 0xFFFF;
-    idt[num].sel = sel;
-    idt[num].always0 = 0;
-    idt[num].flags = flags | 0x80;
-}
-
-void idt_init() {
-    idt_descriptor.limit = sizeof(idt) - 1;
-    idt_descriptor.base = (uint32_t)&idt;
-
-    for(int i = 0; i < 256; i++) {
-        idt_set_gate(i, 0, 0x08, 0x8E);
+void draw_text(const char* text, int x, int y, uint32_t color) {
+    int posx = x;
+    for (int i = 0; text[i] != '\0'; i++) {
+       draw_char(text[i], posx, y, color);
+       posx += CHAR_WIDTH;
     }
-
-    idt_set_gate(0x20, (uint32_t)timer_handler_asm, 0x08, 0x8E);
-    idt_set_gate(0x21, (uint32_t)keyboard_handler_asm, 0x08, 0x8E);
-
-    __asm__ volatile("lidt %0" : : "m"(idt_descriptor));
 }
 
+// Funktion zum Wechsel in den Grafikmodus (VESA)
+// Hinweis: In Protected Mode funktionieren BIOS-Interrupts nicht direkt – diese Funktion dient
+// hier nur als Demonstration.
+void set_video_mode(uint16_t mode) {
+    asm volatile (
+        "mov ax, 0x4F02 \n"  // VESA Set Mode
+        "mov bx, %0 \n"
+        "int $0x10 \n"
+        : : "r"(mode)
+    );
+}
+
+// Struktur eines Fensters
+typedef struct {
+    int x, y;
+    int width, height;
+    uint32_t bg_color;
+    const char* title;
+} Window;
+
+// Zeichnet ein Fenster inklusive Titelzeile (20 Pixel hoch)
+void draw_window(Window *win) {
+    // Fensterhintergrund
+    fill_rect(win->x, win->y, win->width, win->height, win->bg_color);
+    // Titelleiste (blau)
+    fill_rect(win->x, win->y, win->width, 20, 0x0000FF);
+    // Fenster-Titel in der Titelleiste
+    if (win->title) {
+        draw_text(win->title, win->x + 5, win->y + 5, 0xFFFFFF);
+    }
+}
+
+// Funktion, um den "Client-Bereich" (ohne Titelleiste) der Shell zu löschen
+void clear_shell_window(Window *win) {
+    // Lösche den Bereich unter der Titelleiste
+    fill_rect(win->x, win->y + 20, win->width, win->height - 20, win->bg_color);
+}
+
+// --------------------------------------------------------
+// Shell-Implementierung (ganz einfach)
+// --------------------------------------------------------
+#define SHELL_BUFFER_SIZE 128
+char shell_buffer[SHELL_BUFFER_SIZE];
+int shell_buffer_index = 0;
+
+void execute_command(const char *cmd, Window *shell_win) {
+    if(strcmp(cmd, "clear") == 0) {
+        clear_shell_window(shell_win);
+    } else if(strcmp(cmd, "help") == 0) {
+        draw_text("Available commands: help, clear", shell_win->x + 5, shell_win->y + 45, 0xFFFFFF);
+    } else {
+        draw_text("Unknown command", shell_win->x + 5, shell_win->y + 45, 0xFFFFFF);
+    }
+}
+
+void shell_handle_key(char key, Window *shell_win) {
+    if(key == '\n' || key == '\r') {
+        shell_buffer[shell_buffer_index] = '\0';
+        execute_command(shell_buffer, shell_win);
+        shell_buffer_index = 0;
+        // Zeige Prompt neu
+        clear_shell_window(shell_win);
+        draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
+    } else if(key == '\b') {
+        if(shell_buffer_index > 0) {
+            shell_buffer_index--;
+            clear_shell_window(shell_win);
+            draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
+            draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * 8), shell_win->y + 25, 0xFFFFFF);
+        }
+    } else {
+        if(shell_buffer_index < SHELL_BUFFER_SIZE - 1) {
+            shell_buffer[shell_buffer_index++] = key;
+            clear_shell_window(shell_win);
+            draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
+            draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * 8), shell_win->y + 25, 0xFFFFFF);
+        }
+    }
+}
+
+// Dummy-Funktion für "refresh_screen" – hier kein doppeltes Buffering implementiert
+void refresh_screen() {
+    // In einem echten System könnten hier Aktualisierungen oder ein Doublebuffering erfolgen.
+}
+
+// Globaler Pointer auf das aktive Shell-Fenster, wird von keyboard_handler() genutzt
+Window *active_shell = 0;
+
+// --------------------------------------------------------
+// Hauptfunktion: Initialisierung, Grafikmodus, Shell-Fenster
+// --------------------------------------------------------
 void main() {
     gdt_init();
     idt_init();
     pic_remap();
     init_timer();
     init_keyboard();
-    asm("sti");
-    clear_screen();
 
-    uint32_t last_ticks = 0;
+    // Wechsel in den Grafikmodus (z.B. VESA Mode 0x101: 640x480x256 Farben)
+    set_video_mode(0x101);
+    // Bildschirm löschen
+    fill_rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x000000);
+
+    // Erzeuge ein Shell-Fenster
+    Window shell_win = { .x = 50, .y = 50, .width = 540, .height = 380, .bg_color = 0x000000, .title = "ParaOS Shell" };
+    draw_window(&shell_win);
+    active_shell = &shell_win;  // Setze aktives Shell-Fenster
+
+    // Shell-Prompt anzeigen
+    draw_text("ParaOS> ", shell_win.x + 5, shell_win.y + 25, 0xFFFFFF);
+
+    // Hauptloop
     while(1) {
-        if(ticks != last_ticks) {
-            print_number(ticks, 0, 0);
-            last_ticks = ticks;
-        }
+        refresh_screen();
+        asm volatile ("hlt");  // CPU-Wartezustand
     }
 }

@@ -1,3 +1,4 @@
+// os.h
 #ifndef OS_H
 #define OS_H
 
@@ -23,6 +24,22 @@
 #define VGA_WIDTH       80
 #define VGA_HEIGHT      25
 #define VGA_COLOR_WHITE 0x07
+
+// Tasten-Kodes (Beispiele – erweitere diese nach Bedarf)
+#define KEY_LSHIFT 0x2A
+#define KEY_RSHIFT 0x36
+#define KEY_ENTER  0x1C
+#define KEY_BACKSPACE 0x0E
+
+//GUI / Shell
+extern Window *active_shell;
+
+extern void shell_handle_key(char key, Window *shell_win);
+
+volatile uint32_t ticks = 0;
+static uint8_t cursor_x = 0;
+static uint8_t cursor_y = 0;
+static uint16_t* vga_buffer = (uint16_t*)0xB8000;
 
 // GDT
 struct gdt_entry {
@@ -54,7 +71,6 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags);
 void init_timer();
 void init_keyboard();
 void print_char(char c, uint8_t x, uint8_t y);
-void print_number(uint32_t num, uint8_t x, uint8_t y);
 void clear_screen();
 void pic_remap();
 
@@ -75,6 +91,14 @@ static inline uint8_t inb(uint16_t port) {
     uint8_t val;
     asm volatile ("inb %1, %0" : "=a"(val) : "Nd"(port));
     return val;
+}
+
+static inline int strcmp(const char* s1, const char* s2) {
+    while (*s1 && (*s1 == *s2)) {
+        s1++;
+        s2++;
+    }
+    return *(const unsigned char*)s1 - *(const unsigned char*)s2;
 }
 
 #endif // OS_H

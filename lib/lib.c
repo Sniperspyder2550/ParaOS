@@ -1,3 +1,4 @@
+// lib.c
 #include "os.h"
 
 // PIC

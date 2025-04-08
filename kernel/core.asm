@@ -1,3 +1,4 @@
+; core.asm
 [bits 32]
 section .multiboot
 mb_header:

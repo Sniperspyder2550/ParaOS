@@ -1,3 +1,4 @@
+; boot.asm
 [bits 16]
 org 0x7C00
 
@@ -9,7 +10,7 @@ entry:
     mov ss, ax
     mov sp, 0x7C00
 
-    ; VGA-Modus setzen
+    ; VGA-Modus setzen (zunächst Textmodus für Boot-Meldung)
     mov ax, 0x0003
     int 0x10
 
@@ -17,7 +18,7 @@ entry:
     mov si, boot_msg
     call print_string
 
-    ; Kernel laden (später implementieren)
+    ; Kernel laden (später implementiert im Kernel)
     hlt
 
 print_string:

@@ -1,3 +1,4 @@
+// drivers.c
 #include "os.h"
 
 volatile uint32_t ticks = 0;
@@ -18,7 +19,7 @@ void init_timer() {
     outb(0x40, divisor >> 8);
 }
 
-// VGA
+// VGA (Textmodus – wird im Grafikmodus nicht weiter verwendet)
 void move_cursor(uint8_t x, uint8_t y) {
     uint16_t pos = y * VGA_WIDTH + x;
     outb(0x3D4, 0x0F);
@@ -42,7 +43,7 @@ void clear_screen() {
     move_cursor(0, 0);
 }
 
-// Tastatur
+// Tastatur-Keymap (unverändert)
 static const char keymap[] = {
     '\0', '\e', '1','2','3','4','5','6','7','8','9','0','-','=','\b','\t',
     'q','w','e','r','t','y','u','i','o','p','[',']','\n',0,'a','s',
@@ -50,9 +51,11 @@ static const char keymap[] = {
     'b','n','m',',','.','/',0,'*',0,' ',0
 };
 
+// Im Grafikmodus soll der Tastaturhandler die Eingaben an die Shell weiterleiten.
 void keyboard_handler() {
-    uint8_t scancode = inb(0x60);
+    uint8_t scancode = inb(KEYBOARD_DATA);
     static uint8_t shift = 0;
+    char key = 0;
 
     if(scancode & 0x80) {
         if(scancode == (KEY_LSHIFT|0x80) || scancode == (KEY_RSHIFT|0x80)) {
@@ -63,49 +66,30 @@ void keyboard_handler() {
 
     switch(scancode) {
         case KEY_LSHIFT:
-        case KEY_RSHIFT: shift = 1; break;
+        case KEY_RSHIFT:
+            shift = 1;
+            break;
         case KEY_ENTER:
-            cursor_x = 0;
-            cursor_y++;
+            key = '\n';
             break;
         case KEY_BACKSPACE:
-            if(cursor_x > 0) {
-                cursor_x--;
-                print_char(' ', cursor_x, cursor_y);
-            }
+            key = '\b';
             break;
         default:
             if(scancode < sizeof(keymap)) {
-                char c = keymap[scancode];
-                if(shift && c >= 'a' && c <= 'z') c -= 32;
-                if(c) {
-                    print_char(c, cursor_x, cursor_y);
-                    cursor_x++;
-                }
+                key = keymap[scancode];
+                if(shift && key >= 'a' && key <= 'z') key -= 32;
             }
     }
 
-    if(cursor_x >= VGA_WIDTH) {
-        cursor_x = 0;
-        cursor_y++;
-    }
-    
-    if(cursor_y >= VGA_HEIGHT) {
-        for(int y = 1; y < VGA_HEIGHT; y++) {
-            for(int x = 0; x < VGA_WIDTH; x++) {
-                vga_buffer[(y-1)*VGA_WIDTH+x] = vga_buffer[y*VGA_WIDTH+x];
-            }
-        }
-        cursor_y = VGA_HEIGHT-1;
-        for(int x = 0; x < VGA_WIDTH; x++) {
-            print_char(' ', x, cursor_y);
-        }
-    }
-    
-    move_cursor(cursor_x, cursor_y);
+    // Wenn im Grafikmodus eine Shell aktiv ist, leite die Taste an diese weiter
+    if(key && active_shell)
+         shell_handle_key(key, active_shell);
+
+    move_cursor(cursor_x, cursor_y); // für Textmodus, ansonsten irrelevant
     outb(PIC1_CMD, 0x20);
 }
-
+ 
 void init_keyboard() {
     outb(PIC1_DATA, inb(PIC1_DATA) & ~0x02);
 }
