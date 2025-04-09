@@ -1,18 +1,18 @@
 ENTRY(_start)
 
 PHDRS {
-    boot PT_LOAD FLAGS(5);    /* R-X für Bootloader */
-    text PT_LOAD FLAGS(5);    /* R-X für Kernel */
-    data PT_LOAD FLAGS(6);    /* RW- für Daten */
+    boot PT_LOAD FLAGS(5);    /* R-X for bootloader */
+    text PT_LOAD FLAGS(5);    /* R-X for kernel */
+    data PT_LOAD FLAGS(6);    /* RW for data */
 }
 
 SECTIONS {
-    /* Bootloader bei 0x7C00 */
+    /* Bootloader loaded at 0x7C00 */
     .boot 0x7C00 : {
         *(.boot)
     } :boot
 
-    /* Kernel ab 1MB (0x100000) */
+    /* Kernel loaded at 0x100000 */
     . = 0x100000;
 
     .text : {

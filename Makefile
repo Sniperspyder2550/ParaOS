@@ -2,7 +2,9 @@ CC = gcc
 LD = ld
 ASM = nasm
 
-ASMFLAGS = -f elf32
+# Build boot.asm as a raw binary.
+ASMFLAGS = -f bin
+# 32-bit C code options.
 CFLAGS = -m32 -ffreestanding -fno-stack-protector -nostdinc -I.
 LDFLAGS = -m elf_i386 -T linker.ld -nostdlib
 
@@ -20,11 +22,11 @@ all: os_image.bin $(ISO)
 $(BOOTLOADER): boot/boot.asm
 	@echo "[ASM] Compiling bootloader"
 	mkdir -p boot
-	nasm -f bin $< -o $@
+	nasm $(ASMFLAGS) $< -o $@
 
 %.o: %.asm
 	@echo "[ASM] $<"
-	nasm $(ASMFLAGS) $< -o $@
+	nasm -f elf32 $< -o $@
 
 %.o: %.c
 	@echo "[CC] $<"

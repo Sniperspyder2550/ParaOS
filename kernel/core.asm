@@ -13,7 +13,7 @@ extern timer_handler
 extern keyboard_handler
 
 _start:
-    ; BSS-Clear
+    ; Clear BSS
     mov edi, _bss_start
     mov ecx, _bss_end
     sub ecx, edi

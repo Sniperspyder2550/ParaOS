@@ -2,8 +2,8 @@
 #include "os.h"
 
 volatile uint32_t ticks = 0;
-static uint8_t cursor_x = 0;
-static uint8_t cursor_y = 0;
+uint8_t cursor_x = 0;
+uint8_t cursor_y = 0;
 static uint16_t* vga_buffer = (uint16_t*)0xB8000;
 
 // Timer

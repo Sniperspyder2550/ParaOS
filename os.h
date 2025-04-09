@@ -14,7 +14,7 @@
     typedef long long           int64_t;
 #endif
 
-// Hardware-Konstanten
+// Hardware constants
 #define PIC1_CMD        0x20
 #define PIC1_DATA       0x21
 #define PIC2_CMD        0xA0
@@ -22,15 +22,15 @@
 #define KEYBOARD_DATA   0x60
 #define VGA_WIDTH       80
 #define VGA_HEIGHT      25
-#define VGA_COLOR_WHITE 0x0F  // Korrigiert auf 0x0F (weißer Text auf schwarz)
+#define VGA_COLOR_WHITE 0x0F
 
-// Tasten-Codes
+// Key codes
 #define KEY_LSHIFT    0x2A
 #define KEY_RSHIFT    0x36
 #define KEY_ENTER     0x1C
 #define KEY_BACKSPACE 0x0E
 
-// Window-Struktur mit explizitem Struct-Namen
+// Window structure used for the GUI/shell.
 typedef struct Window {
     int x, y;
     int width, height;
@@ -38,11 +38,11 @@ typedef struct Window {
     const char* title;
 } Window;
 
-// Prototypen
 extern Window *active_shell;
+// shell_handle_key will be provided by nucleus.c.
 extern void shell_handle_key(char key, Window *shell_win);
 
-// Hardware-Funktionen
+// Function prototypes
 void gdt_init();
 void idt_init();
 void init_timer();
@@ -52,9 +52,12 @@ void clear_screen();
 void pic_remap();
 void timer_handler();
 void keyboard_handler();
-void move_cursor(uint8_t x, uint8_t y);  // Hinzugefügt
+void move_cursor(uint8_t x, uint8_t y);
 
-// GDT/IDT-Strukturen
+// Cursor global variables.
+extern uint8_t cursor_x;
+extern uint8_t cursor_y;
+
 extern struct gdt_ptr gdt_ptr;
 
 struct gdt_entry {
@@ -80,8 +83,8 @@ struct idt_ptr {
 } __attribute__((packed));
 
 struct gdt_ptr {
-    uint16_t limit;  // Size of the GDT - 1
-    uint32_t base;   // Base address of the GDT
+    uint16_t limit;
+    uint32_t base;
 } __attribute__((packed));
 
 struct gdt_tpr {
@@ -89,15 +92,13 @@ struct gdt_tpr {
     uint32_t base;
 } __attribute__((packed));
 
-// Assembly-Linker-Symbole
 extern void timer_handler_asm();
 extern void keyboard_handler_asm();
 
-// Globale Variablen
 extern volatile uint32_t ticks;
 extern struct idt_ptr idt_descriptor;
 
-// IO-Funktionen
+// IO functions.
 static inline void outb(uint16_t port, uint8_t val) {
     asm volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
@@ -108,7 +109,6 @@ static inline uint8_t inb(uint16_t port) {
     return val;
 }
 
-// String-Funktionen
 static inline int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {
         s1++;
