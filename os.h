@@ -79,6 +79,16 @@ struct idt_ptr {
     uint32_t base;
 } __attribute__((packed));
 
+struct gdt_ptr {
+    uint16_t limit;  // Size of the GDT - 1
+    uint32_t base;   // Base address of the GDT
+} __attribute__((packed));
+
+struct gdt_tpr {
+    uint16_t limit;
+    uint32_t base;
+} __attribute__((packed));
+
 // Assembly-Linker-Symbole
 extern void timer_handler_asm();
 extern void keyboard_handler_asm();

@@ -1,7 +1,52 @@
 // nucleus.c
 #include "os.h"
 
+struct gdt_entry gdt[3] = {0};  // "struck" zu "struct" korrigiert
+// Use the gdt_ptr structure defined in os.h
+
 struct gdt_ptr gdt_ptr;
+
+// --------------------------------------------------------
+// GDT & IDT Implementierung
+// --------------------------------------------------------
+void gdt_init() {
+    gdt_ptr.limit = sizeof(gdt) - 1;
+    gdt_ptr.base = (uint32_t)&gdt;
+
+    // Code-Segment
+    gdt[1] = (struct gdt_entry){
+        .limit_low = 0xFFFF,
+        .base_low = 0,
+        .base_middle = 0,
+        .access = 0x9A,
+        .granularity = 0xCF,
+        .base_high = 0
+    };
+
+    // Data-Segment
+    gdt[2] = (struct gdt_entry){
+        .limit_low = 0xFFFF,
+        .base_low = 0,
+        .base_middle = 0,
+        .access = 0x92,
+        .granularity = 0xCF,
+        .base_high = 0
+    };
+
+    asm volatile("lgdt %0" : : "m"(gdt_ptr));
+    //log("GDT base: 0x%x, limit: 0x%x", gdt_ptr.base, gdt_ptr.limit);
+}
+
+struct idt_entry idt[256];
+struct idt_ptr idt_descriptor;
+
+void idt_init() {
+    idt_descriptor.limit = sizeof(idt) - 1;
+    idt_descriptor.base = (uint32_t)&idt;
+    asm volatile("lidt %0" : : "m"(idt_descriptor));
+
+    //log("IDT base: 0x%x, limit: 0x%x", idt_descriptor.base, idt_descriptor.limit);
+}
 
 // --------------------------------------------------------
 // Neue Definitionsbereiche für Grafik und GUI/Shell
@@ -83,21 +128,24 @@ void execute_command(const char *cmd, Window *shell_win) {
 }
 
 void shell_handle_key(char key, Window *shell_win) {
-    if(key == '\n' || key == '\r') {
+    if (key == '\n' || key == '\r') {
         shell_buffer[shell_buffer_index] = '\0';
         execute_command(shell_buffer, shell_win);
         shell_buffer_index = 0;
+        clear_shell_window(shell_win);
         draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
-    } else if(key == '\b') {
-        if(shell_buffer_index > 0) {
+    } else if (key == '\b') {
+        if (shell_buffer_index > 0) {
             shell_buffer_index--;
             clear_shell_window(shell_win);
             draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
             draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * shell_buffer_index), shell_win->y + 25, 0xFFFFFF);
         }
     } else {
-        if(shell_buffer_index < sizeof(shell_buffer) - 1) {
+        if (shell_buffer_index < sizeof(shell_buffer) - 1) {
             shell_buffer[shell_buffer_index++] = key;
+            clear_shell_window(shell_win);
+            draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
             draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * shell_buffer_index), shell_win->y + 25, 0xFFFFFF);
         }
     }
@@ -132,6 +180,7 @@ int main() {
     draw_text("ParaOS> ", shell_win.x + 5, shell_win.y + 25, 0xFFFFFF);
 
     // Hauptschleife
+    asm volatile("sti");
     while(1) {
         asm volatile("hlt");
     }
