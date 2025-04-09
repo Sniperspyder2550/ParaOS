@@ -1,6 +1,9 @@
 /* nucleus.c */
 #include "os.h"
 
+// Forward declaration for the default handler (provided in default_int.asm)
+extern void default_interrupt_handler_asm();
+
 // ----------------------------------------------------------------------
 // Global Descriptor Table (GDT) Setup
 // ----------------------------------------------------------------------
@@ -40,9 +43,29 @@ void gdt_init() {
 struct idt_entry idt[256];
 struct idt_ptr idt_descriptor;
 
+// Helper function to set an IDT gate.
+void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
+    idt[num].base_lo = base & 0xFFFF;
+    idt[num].sel = sel;
+    idt[num].always0 = 0;
+    idt[num].flags = flags;
+    idt[num].base_hi = (base >> 16) & 0xFFFF;
+}
+
 void idt_init() {
     idt_descriptor.limit = sizeof(idt) - 1;
     idt_descriptor.base  = (uint32_t)&idt;
+
+    // Set gates for timer (IRQ0 => interrupt 32) and keyboard (IRQ1 => interrupt 33)
+    idt_set_gate(32, (uint32_t) timer_handler_asm, 0x08, 0x8E);
+    idt_set_gate(33, (uint32_t) keyboard_handler_asm, 0x08, 0x8E);
+
+    // Install default handler for all remaining entries.
+    for (uint8_t i = 0; i < 256; i++) {
+        if (i != 32 && i != 33)
+            idt_set_gate(i, (uint32_t) default_interrupt_handler_asm, 0x08, 0x8E);
+    }
+
     asm volatile("lidt %0" : : "m"(idt_descriptor));
 }
 
@@ -58,7 +81,7 @@ Window *active_shell;
 char shell_buffer[128];
 int shell_buffer_index = 0;
 
-// Simple framebuffer graphics routines:
+// Framebuffer graphics routines:
 void put_pixel(int x, int y, uint32_t color) {
     if(x >= 0 && x < SCREEN_WIDTH && y >= 0 && y < SCREEN_HEIGHT)
         framebuffer[y * SCREEN_WIDTH + x] = color;
@@ -72,13 +95,13 @@ void fill_rect(int x, int y, int width, int height, uint32_t color) {
     }
 }
 
-// For simplicity, each character is drawn as a simple filled rectangle.
+// For simplicity, each character is drawn as a filled rectangle.
 #define CHAR_WIDTH   8
 #define CHAR_HEIGHT  8
 
 void draw_char(char c, int x, int y, uint32_t color) {
-    /* In a real OS you might load a bitmap font;
-       here we simply draw a rectangle as a placeholder */
+    /* In a full OS, you might draw a bitmap font.
+       Here we simply draw a rectangle as a placeholder. */
     fill_rect(x, y, CHAR_WIDTH, CHAR_HEIGHT, color);
 }
 
@@ -90,9 +113,9 @@ void draw_text(const char* text, int x, int y, uint32_t color) {
     }
 }
 
-// Window functions for the basic GUI shell.
+// Window functions for the GUI/shell.
 void draw_window(Window *win) {
-    // Draw the window background.
+    // Draw window background.
     fill_rect(win->x, win->y, win->width, win->height, win->bg_color);
     // Draw title bar (fixed height of 20 pixels).
     fill_rect(win->x, win->y, win->width, 20, 0x0000FF);
@@ -102,12 +125,11 @@ void draw_window(Window *win) {
 }
 
 void clear_shell_window(Window *win) {
-    // Clear the window content area (below the title bar).
+    // Clear the window's content area (below the title bar).
     fill_rect(win->x, win->y + 20, win->width, win->height - 20, win->bg_color);
 }
 
 // Shell command execution function.
-// You can expand this later to include more commands.
 void execute_command(const char *cmd, Window *shell_win) {
     if (strcmp(cmd, "clear") == 0) {
         clear_shell_window(shell_win);
@@ -132,14 +154,16 @@ void shell_handle_key(char key, Window *shell_win) {
             shell_buffer_index--;
             clear_shell_window(shell_win);
             draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
-            draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * shell_buffer_index), shell_win->y + 25, 0xFFFFFF);
+            draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * shell_buffer_index),
+                      shell_win->y + 25, 0xFFFFFF);
         }
     } else {
         if (shell_buffer_index < (int)(sizeof(shell_buffer) - 1)) {
             shell_buffer[shell_buffer_index++] = key;
             clear_shell_window(shell_win);
             draw_text("ParaOS> ", shell_win->x + 5, shell_win->y + 25, 0xFFFFFF);
-            draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * shell_buffer_index), shell_win->y + 25, 0xFFFFFF);
+            draw_text(shell_buffer, shell_win->x + 5 + (CHAR_WIDTH * shell_buffer_index),
+                      shell_win->y + 25, 0xFFFFFF);
         }
     }
 }
@@ -148,16 +172,16 @@ void shell_handle_key(char key, Window *shell_win) {
 // Main Kernel Function
 // ----------------------------------------------------------------------
 int main() {
-    // Set up segmentation and interrupt handling.
+    // Initialize segmentation and interrupts.
     gdt_init();
     idt_init();
     pic_remap();
 
-    // Initialize the timer and keyboard drivers from drivers.c.
+    // Initialize timer and keyboard drivers (from drivers.c).
     init_timer();
     init_keyboard();
 
-    // Set up the graphics environment: clear the screen.
+    // Set up graphics: clear the screen.
     fill_rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0x000000);
 
     // Create a shell window.
@@ -174,10 +198,10 @@ int main() {
     active_shell = &shell_win;
     draw_text("ParaOS> ", shell_win.x + 5, shell_win.y + 25, 0xFFFFFF);
 
-    // Enable hardware interrupts.
+    // Enable interrupts.
     asm volatile("sti");
 
-    // Main loop: halt until next interrupt.
+    // Main loop: efficient idle using hlt.
     while (1) {
         asm volatile("hlt");
     }

@@ -28,7 +28,7 @@ SECTIONS {
         *(.data .data.*)
     } :data
 
-    .bss : {
+    .bss : ALIGN(4) {
         _bss_start = .;
         *(.bss)
         *(COMMON)

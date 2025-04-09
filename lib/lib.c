@@ -1,7 +1,7 @@
-// lib.c
+/* lib.c */
 #include "os.h"
 
-// PIC remapping routine
+// Remap the PIC.
 void pic_remap() {
     outb(PIC1_CMD, 0x11);
     outb(PIC2_CMD, 0x11);

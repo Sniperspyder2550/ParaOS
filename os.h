@@ -30,7 +30,7 @@
 #define KEY_ENTER     0x1C
 #define KEY_BACKSPACE 0x0E
 
-// Window structure used for the GUI/shell.
+// Window structure for the GUI/shell.
 typedef struct Window {
     int x, y;
     int width, height;
@@ -54,7 +54,7 @@ void timer_handler();
 void keyboard_handler();
 void move_cursor(uint8_t x, uint8_t y);
 
-// Cursor global variables.
+// Global cursor variables.
 extern uint8_t cursor_x;
 extern uint8_t cursor_y;
 
